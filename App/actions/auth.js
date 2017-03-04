@@ -1,5 +1,4 @@
 import OAuthManager from 'react-native-oauth'
-import { AsyncStorage } from 'react-native'
 import _keyBy from 'lodash/keyBy'
 
 import GitHubApi from '@api'
@@ -20,10 +19,6 @@ export const TYPES = {
   PROFILE_ERROR: 'profile/error',
   PROFILE_START: 'profile/start',
   PROFILE_SUCCESS: 'profile/success',
-
-  REPOS_ERROR: 'repos/error',
-  REPOS_START: 'repos/start',
-  REPOS_SUCCESS: 'repos/success',
 }
 
 /* CONFIG
@@ -78,72 +73,10 @@ function profileError(error) {
   }
 }
 
-
-function reposStart() {
-  return {
-    type: TYPES.REPOS_START,
-    loading: true,
-  }
-}
-
-function reposSuccess(repos) {
-  return {
-    type: TYPES.REPOS_SUCCESS,
-    repos,
-  }
-}
-
-function reposError(error) {
-  return {
-    type: TYPES.REPOS_ERROR,
-    error
-  }
-}
-
-function login() {
-  return new Promise( (yup, nope) => {
-    AsyncStorage.getItem('creds')
-      .then(JSON.parse)
-      .then( creds => {
-        let api = null
-
-        try {
-          const api = new GitHubApi({
-            token: creds.accessToken,
-          })
-
-          yup(api)
-        } catch (err) {
-          nope(err)
-        }
-      })
-      .catch(nope)
-  })
-}
-
-function _mapBy(path) {
-  return results => _keyBy(results, path)
-}
-
-export const getRepos = () => {
-  return (dispatch) => {
-    dispatch(reposStart())
-    login()
-      .then( api => {
-        api.repos()
-          .then(_mapBy('owner.login'))
-          .then(reposSuccess)
-          .catch(reposError)
-          .then(dispatch)
-      })
-      .catch( err => dispatch(reposError(err)))
-  }
-}
-
 export const getProfile = () => {
   return (dispatch) => {
     dispatch(profileStart())
-    login()
+    GitHubApi.login()
       .then( api => {
         api.profile()
           .then(profileSuccess)
@@ -161,7 +94,7 @@ export const doLogin = () => {
     return manager.authorize('github', {scopes: 'repo'})
       .then( res => {
         try {
-          AsyncStorage.setItem('creds', JSON.stringify(res.response.credentials))
+          GitHubApi.saveAuth(res.response.credentials)
             .then(loginSuccess)
             .catch(loginError)
             .then(dispatch)

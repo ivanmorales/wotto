@@ -1,11 +1,18 @@
 import axios from 'axios'
 import doWhilst from 'async/doWhilst'
+import _map from 'lodash/map'
+
+import Cache from './cache'
+
+const cache = new Cache()
 
 class GitHubApiError extends Error {
   constructor() {
     super(arguments)
   }
 }
+
+let ApiInstance = null
 
 export default class GitHubApi {
   constructor(config) {
@@ -20,15 +27,57 @@ export default class GitHubApi {
       baseURL: 'https://api.github.com',
       headers: {
         Authorization: `token ${config.token}`
-      }
+      },
+    })
+
+    this.instance.interceptors.response.use((response)=> {
+      console.log(`[${response.status}] ${response.config.url}`);
+      return response
+    })
+  }
+
+  static instance({token}) {
+    return ApiInstance || (ApiInstance = new GitHubApi({token}))
+  }
+
+  static saveAuth(auth) {
+    return new Promise( (yup, nope) => {
+      cache.setItem('creds', auth, { expires: 60 * 24 })
+        .then(yup)
+        .catch(nope)
+    })
+  }
+
+  static login() {
+    // If we already have an instance just return it
+    if (ApiInstance) {
+      return Promise.resolve(ApiInstance)
+    }
+
+    return new Promise( (yup, nope) => {
+      cache.getItem('creds')
+        .then( creds => {
+          console.log('CREDS', creds);
+          try {
+            const api = GitHubApi.instance({
+              token: creds.accessToken,
+            })
+            yup(api)
+          } catch (err) {
+            nope(err)
+          }
+        })
+        .catch(nope)
     })
   }
 
   _getData = response => response.data
 
   profile() {
-    return this.instance.get('/user')
-      .then(this._getData)
+    return this.cacheOutput('profile', () => {
+      return this.instance.get('/user')
+        .then(this._getData)
+    }, { expires: 60 * 4 })
   }
 
   hasLink(links, type = 'next') {
@@ -37,7 +86,6 @@ export default class GitHubApi {
         const match = /^\<([^>]+)\>; rel="([^"]+)"$/ig.exec(link)
         if (!match)
           return {}
-
 
         return {
           url: match[1],
@@ -53,9 +101,7 @@ export default class GitHubApi {
     return null
   }
 
-  makeRequest(path, args = {
-    method: 'get'
-  }, callback) {
+  makeRequest(path, args = { method: 'get' }) {
     return new Promise( (yup, nope) => {
       let links = null
       const data = []
@@ -98,12 +144,48 @@ export default class GitHubApi {
     // })
   }
 
+  repoMap(repo) {
+    return {
+      id: repo.id,
+      language: repo.language,
+      name: repo.name,
+      owner: {
+        login: repo.owner.login,
+        id: repo.owner.id
+      }
+    }
+  }
+
+  cacheOutput(key, fetchItem, policy = {}) {
+    function doFetch(yup, nope) {
+      return fetchItem()
+        .then( response => {
+          cache.setItem(key, response, policy)
+            .then(() => yup(response))
+            // Handle any errors and just return the response
+            .catch(() => yup(response))
+        })
+        .catch(nope)
+    }
+
+    return new Promise( (yup, nope) => {
+      cache.getItem(key)
+        .then(item => {
+          if (item)
+            return yup(item)
+          doFetch(yup, nope)
+        })
+        .catch( () => {
+          return doFetch(yup, nope)
+        })
+    })
+  }
+
   repos() {
-    return this.makeRequest('/user/repos')
-      .then( r => {
-        console.log(r);
-        return r
-      })
-      .then(this._getData)
+    return this.cacheOutput('repos', () => {
+      return this.makeRequest('/user/repos')
+        .then(this._getData)
+        .then( repos => repos.map(this.repoMap))
+    }, { expires: 60 })
   }
 }

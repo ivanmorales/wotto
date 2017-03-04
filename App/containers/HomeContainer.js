@@ -2,7 +2,7 @@ import React,{Component} from 'react'
 import {connect} from 'react-redux'
 import {bindActionCreators} from 'redux'
 
-import * as actions from '@actions/auth'
+import * as actions from '@actions/repos'
 
 import {
   ListView,
@@ -46,10 +46,15 @@ class HomeContainer extends Component {
   }
 
   componentDidUpdate(prevProps, prevState) {
+
     if (prevProps.repos != this.props.repos) {
       this.setState({
         ...this.state,
-        dataSource: this.DataSource.cloneWithRows(this.props.repos)
+        dataSource: this.DataSource.cloneWithRows(Object.keys(this.props.repos).map( name => {
+          return {
+            name
+          }
+        }))
       })
     }
   }
@@ -57,8 +62,8 @@ class HomeContainer extends Component {
   renderRow(row) {
     return (
       <View>
-        <Text style={styles.instructions}>{row.owner.login}/</Text>
         <Text>{row.name}</Text>
+
       </View>
     )
   }
@@ -70,10 +75,15 @@ class HomeContainer extends Component {
 
     return (
       <View style={styles.container}>
-        <Text>Home Boy, {profile.name}</Text>
-        <ListView
-          dataSource={this.state.dataSource}
-          renderRow={this.renderRow.bind(this)} />
+        <View>
+          <Text>Home Boy, {profile.name}</Text>
+        </View>
+        <View>
+          <ListView
+            enableEmptySections={true}
+            dataSource={this.state.dataSource}
+            renderRow={this.renderRow.bind(this)} />
+        </View>
       </View>
     )
   }
@@ -81,7 +91,7 @@ class HomeContainer extends Component {
 
 function mapStateToProps(state){
   return {
-    repos: state.auth.repos.repos,
+    repos: state.repos.repos,
     profile: state.auth.profile.profile,
   }
 }
