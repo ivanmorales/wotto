@@ -92,7 +92,7 @@ const repos = (state = ReposInitialState, action) => {
       return {
         ...state,
         loading: false,
-        error: action.error,
+        error: action.error.message || action.error,
       }
     default:
       return state

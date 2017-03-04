@@ -8,6 +8,7 @@
 		"test": "jest"
 	},
 	"dependencies": {
+		"async": "^2.1.5",
 		"axios": "^0.15.3",
 		"deep-diff": "^0.3.4",
 		"lodash": "^4.17.4",

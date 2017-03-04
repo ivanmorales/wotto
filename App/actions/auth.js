@@ -1,5 +1,7 @@
 import OAuthManager from 'react-native-oauth'
 import { AsyncStorage } from 'react-native'
+import _keyBy from 'lodash/keyBy'
+
 import GitHubApi from '@api'
 
 const manager = new OAuthManager('wotto')
@@ -119,6 +121,9 @@ function login() {
   })
 }
 
+function _mapBy(path) {
+  return results => _keyBy(results, path)
+}
 
 export const getRepos = () => {
   return (dispatch) => {
@@ -126,6 +131,7 @@ export const getRepos = () => {
     login()
       .then( api => {
         api.repos()
+          .then(_mapBy('owner.login'))
           .then(reposSuccess)
           .catch(reposError)
           .then(dispatch)
