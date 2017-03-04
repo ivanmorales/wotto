@@ -1,0 +1,6 @@
+framework module Pods_wotto {
+  umbrella header "Pods-wotto-umbrella.h"
+
+  export *
+  module * { export * }
+}
