@@ -57,7 +57,6 @@ export default class GitHubApi {
     return new Promise( (yup, nope) => {
       cache.getItem('creds')
         .then( creds => {
-          console.log('CREDS', creds);
           try {
             const api = GitHubApi.instance({
               token: creds.accessToken,
@@ -151,7 +150,9 @@ export default class GitHubApi {
       name: repo.name,
       owner: {
         login: repo.owner.login,
-        id: repo.owner.id
+        id: repo.owner.id,
+        avatar: repo.owner.avatar_url,
+        type: repo.owner.type,
       }
     }
   }
@@ -182,7 +183,7 @@ export default class GitHubApi {
   }
 
   repos() {
-    return this.cacheOutput('repos', () => {
+    return this.cacheOutput('repos__', () => {
       return this.makeRequest('/user/repos')
         .then(this._getData)
         .then( repos => repos.map(this.repoMap))

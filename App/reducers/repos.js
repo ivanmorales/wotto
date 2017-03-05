@@ -1,10 +1,12 @@
 import { combineReducers } from 'redux'
 import { TYPES } from '@actions/repos'
+import _remove from 'lodash/remove'
 
 const ReposInitialState = {
   error: null,
   loading: false,
-  repos: []
+  repos: [],
+  favorites: [],
 }
 
 const repos = (state = ReposInitialState, action) => {
@@ -25,6 +27,16 @@ const repos = (state = ReposInitialState, action) => {
         ...state,
         loading: false,
         error: action.error.message || action.error,
+      }
+    case TYPES.OWNER_FAVORITE:
+      return {
+        ...state,
+        favorites: [...state.favorites, action.repoId]
+      }
+    case TYPES.OWNER_FAVORITE_REMOVE:
+      return {
+        ...state,
+        favorites: _remove(state.favorites, action.repoId)
       }
     default:
       return state

@@ -6,6 +6,8 @@ export const TYPES = {
   REPOS_ERROR: 'repos/error',
   REPOS_START: 'repos/start',
   REPOS_SUCCESS: 'repos/success',
+  OWNER_FAVORITE: 'repos/favoriteOwner',
+  OWNER_FAVORITE_REMOVE: 'repos/favoriteOwner/remove',
 }
 
 function reposStart() {
@@ -42,6 +44,21 @@ function _mapBy(path) {
   }
 }
 
+function mapRepos(repos) {
+  return repos.reduce( (items, repo) => {
+    const key = repo.owner.login
+    // find owner object
+    if (!items[key]) {
+      // if it doesn't exist, create owner object
+      items[key] = { ...repo.owner}
+      items[key].repos = []
+    }
+    // add repo to owner's repos
+    items[key].repos.push(repo)
+    return items
+  }, {})
+}
+
 function _deepValue(obj, path) {
     parts = path.split(".")
     if (parts.length==1){
@@ -56,11 +73,25 @@ export const getRepos = () => {
     GitHubApi.login()
       .then( api => {
         api.repos()
-          .then(_mapBy('owner.login'))
+          .then(mapRepos)
           .then(reposSuccess)
           .catch(reposError)
           .then(dispatch)
       })
       .catch( err => dispatch(reposError(err)))
   }
+}
+
+export const favoriteAdd = (ownerId) => {
+  dispatch({
+    type: TYPES.OWNER_FAVORITE,
+    ownerId,
+  })
+}
+
+export const favoriteRemove = (ownerId) => {
+  dispatch({
+    type: TYPES.OWNER_FAVORITE_REMOVE,
+    ownerId,
+  })
 }
